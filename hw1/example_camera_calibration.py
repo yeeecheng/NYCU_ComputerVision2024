@@ -19,7 +19,7 @@ objpoints = [] # 3d points in real world space
 imgpoints = [] # 2d points in image plane.
 
 # Make a list of calibration images
-images = glob.glob('data/*.jpg')
+images = glob.glob('data/7by7/*.jpg')
 
 # Step through the list and search for chessboard corners
 print('Start finding chessboard corners...')
@@ -68,6 +68,16 @@ Write your code here
 
 
 """
+
+
+mean_error = 0
+for i in range(len(objpoints)):
+    imgpoints2, _ = cv2.projectPoints(objpoints[i], rvecs[i], tvecs[i], mtx, dist)
+    print(imgpoints2.shape, imgpoints[i].shape, objpoints[i].shape)
+    error = cv2.norm(imgpoints[i], imgpoints2, cv2.NORM_L2)/len(imgpoints2)
+    mean_error += error
+
+print( "total error: {}".format(mean_error/len(objpoints)) )
 # show the camera extrinsics
 print('Show the camera extrinsics')
 # plot setting

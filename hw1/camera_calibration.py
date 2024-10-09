@@ -173,7 +173,28 @@ class CameraCalibration:
             rvecs.append(rvec)
             tvecs.append(np.vstack((t)))
         
-        return rvecs, tvecs
+        return np.array(rvecs), np.array(tvecs)
+
+    def reprojection_error(self, A, rvecs, tvecs):
+        
+        dist_coeffs = np.zeros((4, 1))
+        # Define the 3D world points in world coordinate system, this part need 3D array.
+        world_points = np.zeros((self.n_corner_x * self.n_corner_y, 3), np.float32)
+        # Prepare world points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0). 
+        world_points[:, :2] = np.mgrid[0 : self.n_corner_x, 0 : self.n_corner_y].T.reshape(-1, 2)
+        list_world_points_3d = []
+        for _ in range(self.list_images_points_2d.shape[0]):
+            list_world_points_3d.append(world_points)
+        list_world_points_3d = np.array(list_world_points_3d) 
+        mean_error = 0
+        for i in range(len(list_world_points_3d)):
+            imgpoints2, _ = cv2.projectPoints(list_world_points_3d[i], rvecs[i], tvecs[i], A, dist_coeffs)
+            # from (num_points, 1, 2) to (num_points, 2)
+            imgpoints2 = np.squeeze(imgpoints2)
+            error = cv2.norm(self.list_images_points_2d[i], imgpoints2, cv2.NORM_L2)/len(imgpoints2)
+            mean_error += error
+        
+        print( "total error: {}".format(mean_error/len(list_world_points_3d)) )
 
 def visualize(A, rvecs, tvecs):
     """ Visualize picture """
@@ -235,7 +256,8 @@ def run_camera_calibration(args):
     rvecs, tvecs = camera_calibration.get_extrinsic_matrix(A, list_H)
     print("----Estimated rotate vector of extrinsic matrix is ----\n", rvecs)
     print("----Estimated translation vector of extrinsic matrix is ----\n", tvecs)
-    visualize(A, rvecs, tvecs)
+    # visualize(A, rvecs, tvecs)
+    camera_calibration.reprojection_error(A, rvecs, tvecs)
 
 def parse_args():
     parse = argparse.ArgumentParser()
