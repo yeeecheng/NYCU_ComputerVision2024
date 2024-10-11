@@ -9,7 +9,7 @@ from mpl_toolkits.mplot3d import Axes3D
 # (8,6) is for the given testing images.
 # If you use the another data (e.g. pictures you take by your smartphone), 
 # you need to set the corresponding numbers.
-corner_x = 7
+corner_x = 10
 corner_y = 7
 objp = np.zeros((corner_x*corner_y,3), np.float32)
 objp[:,:2] = np.mgrid[0:corner_x, 0:corner_y].T.reshape(-1,2)
@@ -19,10 +19,11 @@ objpoints = [] # 3d points in real world space
 imgpoints = [] # 2d points in image plane.
 
 # Make a list of calibration images
-images = glob.glob('data/7by7/*.jpg')
+images = glob.glob('data/data30/*.jpg')
 
 # Step through the list and search for chessboard corners
 print('Start finding chessboard corners...')
+cnt = 30
 for idx, fname in enumerate(images):
     img = cv2.imread(fname)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -41,6 +42,8 @@ for idx, fname in enumerate(images):
         cv2.drawChessboardCorners(img, (corner_x,corner_y), corners, ret)
         plt.imshow(img)
 
+    if idx + 1 == cnt:
+        break
 
 #######################################################################################################
 #                                Homework 1 Camera Calibration                                        #
@@ -59,8 +62,13 @@ img_size = img[0].shape
 ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img_size,None,None)
 Vr = np.array(rvecs)
 Tr = np.array(tvecs)
+
+
+print(Vr.shape, Tr.shape)
 print(mtx)
+print(dist)
 extrinsics = np.concatenate((Vr, Tr), axis=1).reshape(-1,6)
+print(extrinsics)
 """
 Write your code here
 
@@ -69,15 +77,29 @@ Write your code here
 
 """
 
-
 mean_error = 0
 for i in range(len(objpoints)):
     imgpoints2, _ = cv2.projectPoints(objpoints[i], rvecs[i], tvecs[i], mtx, dist)
-    print(imgpoints2.shape, imgpoints[i].shape, objpoints[i].shape)
     error = cv2.norm(imgpoints[i], imgpoints2, cv2.NORM_L2)/len(imgpoints2)
+    print(error)
     mean_error += error
 
 print( "total error: {}".format(mean_error/len(objpoints)) )
+
+
+for idx, fname in enumerate(images):
+    img = cv2.imread(fname)
+    h, w = img.shape[:2]
+    new_camera_matrix, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w,h), 1)
+    undistorted_img = cv2.undistort(img, mtx, dist, None, new_camera_matrix)
+    x, y, w, h = roi
+    undistorted_img = undistorted_img[y:y+h, x:x+w]
+    cv2.imwrite(f"./data/undistoration/{idx}.jpg", undistorted_img)
+
+
+
+
+
 # show the camera extrinsics
 print('Show the camera extrinsics')
 # plot setting
